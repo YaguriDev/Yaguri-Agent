@@ -9,6 +9,7 @@ import { TelegramApi } from "../../telegram/api";
 import { config } from "../../config";
 import path from "path";
 import fs from "fs/promises";
+import { WebService } from "../../services/web";
 
 export const registerAllTools = (server: McpServer): void => {
   server.tool("add_finance", "Добавить трату или доход", { amount: z.number(), category: z.string(), description: z.string() }, async ({ amount, category, description }) => {
@@ -113,4 +114,12 @@ export const registerAllTools = (server: McpServer): void => {
     }
     return { content: [{ type: "text" as const, text: `Copied → ${dest}` }] };
   });
+
+  server.tool("web_search", "Поиск в интернете через DuckDuckGo", { query: z.string(), max_results: z.number().optional() }, async ({ query, max_results }) => ({
+    content: [{ type: "text" as const, text: await WebService.search(query, max_results) }],
+  }));
+
+  server.tool("fetch_page", "Открыть и прочитать содержимое сайта по URL", { url: z.string() }, async ({ url }) => ({
+    content: [{ type: "text" as const, text: await WebService.fetchPage(url) }],
+  }));
 };

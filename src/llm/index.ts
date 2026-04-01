@@ -306,6 +306,35 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function" as const,
+    function: {
+      name: "web_search",
+      description: "Поиск в интернете через HTML DuckDuckGo. Используй когда нужно найти актуальную информацию, загуглить что-то, узнать новости или найти решение проблемы. Работает без ключей",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Поисковый запрос" },
+          max_results: { type: "number", description: "Максимум результатов (по умолчанию 5)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "fetch_page",
+      description: "Открыть и прочитать содержимое сайта, репозитория или любой веб-страницы по URL.",
+      parameters: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "URL страницы" },
+        },
+        required: ["url"],
+      },
+    },
+  },
 ];
 
 const buildSystemPrompt = (userContext: string, timezone: string): string => {
@@ -339,6 +368,8 @@ const buildSystemPrompt = (userContext: string, timezone: string): string => {
 - Забыть всё о пользователе → clear_facts
 - Очистить сессию/начать заново → clear_session
 - Изменить имя, часовой пояс или описание → update_profile
+- Поиск в интернете → web_search. Если ошибка - сразу используй fetch_page на конкретных сайтах (cbr.ru, banki.ru, rbc.ru, finance.yahoo.com и т.д.).
+- Открыть/прочитать сайт → fetch_page
 
 **Критически важно по времени:**
 - Часовой пояс пользователя: ${tz}

@@ -8,7 +8,7 @@
 [![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://core.telegram.org/bots)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-**Self-hosted AI assistant for Telegram with finance tracking, notes, reminders and calendar**
+**Self-hosted AI assistant for Telegram with finance tracking, notes, reminders, calendar and web search**
 
 [🇷🇺 Русский](README.md) •
 [Features](#-features) •
@@ -21,13 +21,14 @@
 
 ## 📋 About
 
-Yaguri is a personal AI assistant that works through Telegram. It understands natural language and helps track finances, create notes, set reminders, and manage your calendar. All data is stored locally in SQLite and can be synced to Obsidian.
+Yaguri is a personal AI assistant that works through Telegram. It understands natural language and helps track finances, create notes, set reminders, manage your calendar, search the web, and read websites. All data is stored locally in SQLite and can be synced to Obsidian.
 
 ### Why Yaguri?
 
 - **Privacy** - all data stored locally on your machine
 - **Natural language** - just write as you would to a friend
 - **Flexible** - works with any OpenAI-compatible LLM API
+- **Web search** - DuckDuckGo search and page reading with no API keys required
 - **Integration** - sync with Obsidian for beautiful reports
 - **MCP server** - works with Claude Desktop and other MCP clients
 
@@ -35,15 +36,17 @@ Yaguri is a personal AI assistant that works through Telegram. It understands na
 
 ## ✨ Features
 
-| Feature          | Examples                                                     |
-| ---------------- | ------------------------------------------------------------ |
-| 💰 **Finance**   | `-50 groceries`, `+3000 salary`, `spending this month?`      |
-| 📝 **Notes**     | `note: project ideas`, `show notes`, `find notes about work` |
-| ⏰ **Reminders** | `remind me in 30 min to call`, `tomorrow at 10am meeting`    |
-| 📅 **Calendar**  | `meeting friday 3pm`, `is wednesday free?`                   |
-| 🧠 **Memory**    | `remember I prefer morning meetings`, `my name is Alex`      |
-| 📎 **Files**     | Images, documents (.txt, .md, .json), voice messages         |
-| 🔄 **Sync**      | Export all data to Obsidian vault                            |
+| Feature           | Examples                                                         |
+| ----------------- | ---------------------------------------------------------------- |
+| 💰 **Finance**    | `-50 groceries`, `+3000 salary`, `spending this month?`          |
+| 📝 **Notes**      | `note: project ideas`, `show notes`, `find notes about work`     |
+| ⏰ **Reminders**  | `remind me in 30 min to call`, `tomorrow at 10am meeting`        |
+| 📅 **Calendar**   | `meeting friday 3pm`, `is wednesday free?`                       |
+| 🔍 **Web Search** | `google how to fix CORS error`, `find latest news about GPT-5`   |
+| 🌐 **Read Pages** | `read this article: https://...`, `open repo and explain README` |
+| 🧠 **Memory**     | `remember I prefer morning meetings`, `my name is Alex`          |
+| 📎 **Files**      | Images, documents (.txt, .md, .json), voice messages             |
+| 🔄 **Sync**       | Export all data to Obsidian vault                                |
 
 ---
 
@@ -54,6 +57,7 @@ Yaguri is a personal AI assistant that works through Telegram. It understands na
 - **better-sqlite3** - local database
 - **Telegram Bot API** - chat interface
 - **OpenAI-compatible API** - any LLM (local or cloud)
+- **cheerio** - HTML parsing for web page reading
 - **Groq Whisper** - voice transcription
 - **MCP SDK** - Model Context Protocol
 
@@ -143,13 +147,42 @@ WORKSPACE_PATH=./workspace
 | `/sync`    | Sync to Obsidian            |
 | `/profile` | View profile                |
 
+### Example conversations
+
+**Finance:**
+
+```
+You: -890 taxi to work
+Bot: ✅ Saved: -890 ₽, Transport - taxi to work
+
+You: how much did I spend today?
+Bot: 📊 Today: -2340 ₽
+     • Transport: -890 ₽
+     • Food out: -450 ₽
+     • Groceries: -1000 ₽
+```
+
+**Web search and reading:**
+
+```
+You: google how to fix "Cannot find module" in Node.js
+Bot: 🔍 Found 5 results:
+     1. Stack Overflow - "Cannot find module" error in Node.js
+        https://stackoverflow.com/...
+     2. Node.js docs - Module resolution
+     ...
+
+You: read the first link
+Bot: 📄 Reading... The main cause of this error is an incorrect path or...
+```
+
 ### Tips
 
 **Minimize to tray:** Use [RBTray](https://github.com/benbuck/rbtray) - right-click minimize button to send window to tray.
 
 **Autostart:** Create shortcut to `start.bat` in `shell:startup` folder.
 
-**Best model for me:** `qwen3.5-9b-uncensored-hauhaucs-aggressive`.
+**Best model:** `qwen3.5-9b-uncensored-hauhaucs-aggressive` - great balance of speed, vision and tool calling support.
 
 ---
 
@@ -173,6 +206,40 @@ Add to `claude_desktop_config.json`:
     }
   }
 }
+```
+
+---
+
+## 📁 Project Structure
+
+```
+yaguri/
+├── src/
+│   ├── index.ts          # Telegram bot entry point
+│   ├── mcp-entry.ts      # MCP server entry point
+│   ├── config.ts         # Configuration
+│   ├── db/               # Database and migrations
+│   ├── llm/              # LLM integration
+│   ├── services/
+│   │   ├── finance.ts    # Finance tracking
+│   │   ├── notes.ts      # Notes
+│   │   ├── reminders.ts  # Reminders
+│   │   ├── calendar.ts   # Calendar
+│   │   ├── web.ts        # Web search and page reading
+│   │   ├── files.ts      # File handling
+│   │   ├── profile.ts    # User profile
+│   │   └── session.ts    # Chat history
+│   ├── telegram/         # Telegram API
+│   ├── obsidian/         # Obsidian sync
+│   ├── mcp/              # MCP server
+│   └── utils/            # Utilities
+├── data/                 # Database (auto-created)
+├── workspace/            # Working files
+├── .env                  # Config (not in git)
+├── .env.example          # Config example
+├── package.json
+├── tsconfig.json
+└── start.bat             # Startup script
 ```
 
 ---

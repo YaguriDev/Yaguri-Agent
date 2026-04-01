@@ -14,6 +14,7 @@ import { ProfileService } from "./services/profile";
 import { FileHandler } from "./services/files";
 import { ObsidianSync } from "./obsidian";
 import { printAgentLogo } from "./utils/logo";
+import { WebService } from "./services/web";
 
 process.on("uncaughtException", (err) => {
   console.error("[fatal]", err);
@@ -101,6 +102,12 @@ const handleToolCall = async (name: string, args: any, chatId: number, timezone:
     case "clear_session": {
       const count = SessionService.clear(chatId);
       return JSON.stringify({ ok: true, cleared: count, message: "История чата очищена" });
+    }
+    case "web_search": {
+      return WebService.search(args.query as string, args.max_results as number | undefined);
+    }
+    case "fetch_page": {
+      return WebService.fetchPage(args.url as string);
     }
     default:
       return JSON.stringify({ error: `Unknown tool: ${name}` });
