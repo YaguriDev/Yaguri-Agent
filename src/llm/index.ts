@@ -395,6 +395,7 @@ const cleanResponse = (text: string): string => {
   let cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
   cleaned = cleaned.replace(/<think>[\s\S]*/gi, "");
   cleaned = cleaned.replace(/<\/?think>/gi, "");
+  cleaned = cleaned.replace(/^#{1,6}\s*/gm, "");
   cleaned = cleaned.replace(/^\s*\n+/, "");
   return cleaned.trim();
 };
