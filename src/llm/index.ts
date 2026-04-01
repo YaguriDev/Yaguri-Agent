@@ -364,6 +364,37 @@ const cleanResponse = (text: string): string => {
   return cleaned.trim();
 };
 
+const extractLeakedToolCalls = (reasoning: string): ToolCall[] => {
+  const results: ToolCall[] = [];
+  const funcRegex = /<function=(\w+)>([\s\S]*?)<\/function>/g;
+  let match;
+
+  while ((match = funcRegex.exec(reasoning)) !== null) {
+    const name = match[1];
+    const body = match[2];
+    const args: Record<string, unknown> = {};
+
+    const paramRegex = /<parameter=(\w+)>\n?([\s\S]*?)\n?<\/parameter>/g;
+    let paramMatch;
+    while ((paramMatch = paramRegex.exec(body)) !== null) {
+      const key = paramMatch[1];
+      const val = paramMatch[2].trim();
+      if (val === "true") args[key] = true;
+      else if (val === "false") args[key] = false;
+      else if (val !== "" && !isNaN(Number(val))) args[key] = Number(val);
+      else args[key] = val;
+    }
+
+    results.push({
+      id: `recovered_${Date.now()}_${results.length}`,
+      type: "function",
+      function: { name, arguments: JSON.stringify(args) },
+    });
+  }
+
+  return results;
+};
+
 const fetchWithTimeout = async (url: string, opts: RequestInit, timeoutMs: number): Promise<Response> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -401,7 +432,10 @@ export const LLM = {
         messages,
         tools: TOOLS,
         tool_choice: "auto",
-        temperature: 0.3,
+        temperature: 0.6,
+        top_p: 0.95,
+        top_k: 20,
+        min_p: 0,
         max_tokens: config.llm.maxTokens,
       };
 
@@ -433,6 +467,15 @@ export const LLM = {
       if (!choice) throw new Error("LLM: no choices");
 
       const assistant = choice.message;
+
+      if ((!assistant.tool_calls || assistant.tool_calls.length === 0) && assistant.reasoning_content) {
+        const leaked = extractLeakedToolCalls(assistant.reasoning_content);
+        if (leaked.length > 0) {
+          console.log(`[llm] Recovered ${leaked.length} tool call(s) from reasoning_content`);
+          assistant.tool_calls = leaked;
+          assistant.content = null;
+        }
+      }
 
       const assistantMsg: LLMMessage = {
         role: "assistant",
