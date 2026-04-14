@@ -441,8 +441,21 @@ const fetchWithTimeout = async (url: string, opts: RequestInit, timeoutMs: numbe
   }
 };
 
+export type ToolCallRecord = {
+  name: string;
+  args: any;
+  result: string;
+};
+
 export const LLM = {
-  chat: async (userContent: string | Array<any>, history: SessionMessage[], userContext: string, toolHandler: (name: string, args: any) => Promise<string>, timezone: string = "Europe/Moscow"): Promise<string> => {
+  chat: async (
+    userContent: string | Array<any>,
+    history: SessionMessage[],
+    userContext: string,
+    toolHandler: (name: string, args: any) => Promise<string>,
+    timezone: string = "Europe/Moscow",
+    onToolCall?: (record: ToolCallRecord) => void,
+  ): Promise<string> => {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -541,16 +554,21 @@ export const LLM = {
 
         try {
           const result = await toolHandler(tc.function.name, args);
+
+          onToolCall?.({ name: tc.function.name, args, result });
+
           messages.push({
             role: "tool",
             tool_call_id: tc.id,
             content: result,
           });
         } catch (err) {
+          const errorResult = `Error: ${(err as Error).message}`;
+          onToolCall?.({ name: tc.function.name, args, result: errorResult });
           messages.push({
             role: "tool",
             tool_call_id: tc.id,
-            content: `Error: ${(err as Error).message}`,
+            content: errorResult,
           });
         }
       }

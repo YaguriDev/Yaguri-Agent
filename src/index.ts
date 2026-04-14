@@ -4,7 +4,7 @@ import { TelegramPoller } from "./telegram/poller";
 import { TelegramApi, TgUpdate, TgMessage } from "./telegram/api";
 import { handleCommand } from "./telegram/commands";
 import { createQueue } from "./queue";
-import { LLM } from "./llm";
+import { LLM, ToolCallRecord } from "./llm";
 import { FinanceService } from "./services/finance";
 import { NotesService } from "./services/notes";
 import { RemindersService } from "./services/reminders";
@@ -114,6 +114,11 @@ const handleToolCall = async (name: string, args: any, chatId: number, timezone:
   }
 };
 
+const serializeToolCall = (record: ToolCallRecord): string => {
+  const resultPreview = record.result.slice(0, 400);
+  return `[tool_call:${record.name}] args=${JSON.stringify(record.args)} result=${resultPreview}`;
+};
+
 const extractMessageContent = async (msg: TgMessage): Promise<{ textForSession: string; llmContent: string | Array<any> }> => {
   const text = msg.text ?? msg.caption ?? null;
 
@@ -177,10 +182,25 @@ const processMessage = async (update: TgUpdate): Promise<void> => {
     const profile = ProfileService.get(chatId);
     const timezone = profile?.timezone || "Europe/Moscow";
 
-    const response = await LLM.chat(llmContent, history, userContext, (name, args) => handleToolCall(name, args, chatId, timezone), timezone);
+    const toolCallLog: ToolCallRecord[] = [];
+
+    const response = await LLM.chat(
+      llmContent,
+      history,
+      userContext,
+      (name, args) => handleToolCall(name, args, chatId, timezone),
+      timezone,
+      (record) => toolCallLog.push(record),
+    );
 
     SessionService.add(chatId, "user", textForSession || "(файл)");
-    if (response) SessionService.add(chatId, "assistant", response);
+
+    const assistantParts: string[] = [...toolCallLog.map(serializeToolCall), response].filter(Boolean);
+
+    const fullAssistantContent = assistantParts.join("\n");
+    if (fullAssistantContent) {
+      SessionService.add(chatId, "assistant", fullAssistantContent);
+    }
 
     TelegramPoller.markProcessed(messageId, chatId);
     await TelegramApi.setDoneReaction(chatId, messageId);
@@ -191,7 +211,7 @@ const processMessage = async (update: TgUpdate): Promise<void> => {
       console.warn(`[process] Empty response for #${messageId}`);
     }
 
-    console.log(`[process] Done #${messageId}`);
+    console.log(`[process] Done #${messageId} (tool calls: ${toolCallLog.length})`);
   } catch (err) {
     console.error(`[process] Error #${messageId}:`, err);
     await TelegramApi.setErrorReaction(chatId, messageId);
